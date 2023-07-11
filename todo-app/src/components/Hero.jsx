@@ -1,8 +1,9 @@
 import React, {useState, useEffect} from 'react';
 import { AiOutlinePlus } from 'react-icons/ai';
 import Todo from './Todo';
+import { UserAuth } from '../context/AuthContext';
 import {db} from '../firebase';
-import {query, collection, onSnapshot, updateDoc, doc, addDoc, deleteDoc} from 'firebase/firestore';
+import {query, collection, onSnapshot, updateDoc, doc, addDoc, deleteDoc, arrayUnion} from 'firebase/firestore';
 
 const style = {
   bg: `h-screen w-full p-4 bg-gradient-to-r from-[#808080] to-[#FFFFFF]`,
@@ -15,24 +16,34 @@ const style = {
 }
 
 function Hero() {
+  const [like, setLike] = useState(false);
+  const [saved, setSaved] = useState(false);
 const[todos, setTodos] = useState([])
 const[input, setInput] = useState('')
-console.log(input);
+const { user} = UserAuth();
 
+const userTodo = doc(db, 'users', `${user?.email}`); // user?.email is the user's email address
 
 //Create todo
-const creatTodo = async (e) => {
+const createTodo = async (e) => {
   e.preventDefault(e)
-  if(input === '') {
-    alert('Please enter a todo')
-    return
+  if (user?.email) {
+    try{
+    setLike(!like);
+    setSaved(true);
+    await updateDoc(userTodo, {
+      todos: arrayUnion({
+        text: input,
+        completed: false,
+      }),
+    });
+    setInput('')
+  }catch(error){
+    console.log(error)
+  }} else {
+    alert('Please log in to add');
   }
-  await addDoc(collection(db, "todos"), {
-    text: input,
-    completed: false,
-  })
-  setInput('')
-}
+};
 
 //Read todo from firebase
 useEffect(() => {
@@ -65,7 +76,7 @@ const deleteTodo = async (id) => {
     <div className={style.bg}>
       <div className={style.container}>
       <h3 className={style.heading}>Todo App</h3>
-      <form onSubmit={creatTodo} className={style.form}>
+      <form onSubmit={createTodo} className={style.form}>
         <input value={input} onChange={(e) => setInput(e.target.value)} className={style.input} type="text" placeholder='Add Todo'></input>
         <button className={style.button}><AiOutlinePlus size={30} /></button>
         </form>
