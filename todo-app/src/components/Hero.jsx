@@ -51,19 +51,47 @@ const createTodo = async (e) => {
   }
 };
 
-//Read todo from firebase
+// Read todo from firebase
 useEffect(() => {
-  onSnapshot(doc(db, 'users', `${user?.email}`), (doc) => {
-    setTodos(doc.data()?.todos);
-  });
+  if (user?.email) {
+    const unsubscribe = onSnapshot(doc(db, 'users', `${user.email}`), (doc) => {
+      const data = doc.data();
+      console.log('Fetched data:', data);
+      setTodos(data?.todos);
+    });
+
+    return () => {
+      // Cleanup the subscription when the component unmounts or when the user changes
+      unsubscribe();
+    };
+  } else {
+    // User has logged out, clear the todos state
+    setTodos([]);
+  }
 }, [user?.email]);
 
-//Update todo in firebase
+// Update todo in firebase
 const toggleComplete = async (todo) => {
-  await updateDoc(doc(db, 'todos', todo.id), {
-    completed: !todo.completed
-  })
-}
+  try {
+    const todoRef = doc(db, 'users', `${user?.email}`);
+    const updatedTodos = todos.map((item) => {
+      if (item.id === todo.id) {
+        return {
+          ...item,
+          completed: !item.completed,
+        };
+      }
+      return item;
+    });
+
+    await updateDoc(todoRef, {
+      todos: updatedTodos,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 
 //Delete todo from firebase
  const todoRef = doc(db, 'users', `${user?.email}`)
