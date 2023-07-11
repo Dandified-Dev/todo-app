@@ -15,6 +15,11 @@ const style = {
   count: `text-center p-2`,
 }
 
+//make a function that give a random id with a length of 12 characters to each todo
+const randomId = () => {
+  return Math.random().toString(36).substr(2, 12);
+};
+
 function Hero() {
   const [like, setLike] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -35,6 +40,7 @@ const createTodo = async (e) => {
       todos: arrayUnion({
         text: input,
         completed: false,
+        id: randomId(),
       }),
     });
     setInput('')
@@ -47,16 +53,10 @@ const createTodo = async (e) => {
 
 //Read todo from firebase
 useEffect(() => {
-  const q = query(collection(db, "todos"))
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    let todosArr = []
-    querySnapshot.forEach((doc) => {
-      todosArr.push({...doc.data(), id: doc.id})
-});
-setTodos(todosArr)
-  })
-  return () => unsubscribe()
-}, [])
+  onSnapshot(doc(db, 'users', `${user?.email}`), (doc) => {
+    setTodos(doc.data()?.todos);
+  });
+}, [user?.email]);
 
 //Update todo in firebase
 const toggleComplete = async (todo) => {
@@ -66,11 +66,17 @@ const toggleComplete = async (todo) => {
 }
 
 //Delete todo from firebase
-const deleteTodo = async (id) => {
-  await deleteDoc(doc(db, 'todos', id), {
-    deleted: true
-  })
-}
+ const todoRef = doc(db, 'users', `${user?.email}`)
+  const deleteTodo = async (id) => {
+      try {
+        const result = todos.filter((item) => item.id !== id)
+        await updateDoc(todoRef, {
+            todos: result
+        })
+      } catch (error) {
+          console.log(error)
+      }
+  }
 
   return (
     <div className={style.bg}>
